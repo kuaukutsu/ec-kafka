@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"strings"
@@ -99,22 +100,37 @@ func (c Consumer) Validate() error {
 	return nil
 }
 
-func New() *Config {
-	cfgPath := fetchConfigPath()
-	if cfgPath == "" {
-		panic("CONFIG_PATH is not set")
+// LoadFromArgs resolves the config path from args (os.Args[1:]) or CONFIG_PATH
+// and loads the config from it.
+func LoadFromArgs(args []string) (*Config, error) {
+	path, err := ResolvePath(args)
+	if err != nil {
+		return nil, err
+	}
+
+	return Load(path)
+}
+
+// ErrPathRequired is returned when neither --config nor CONFIG_PATH is set.
+var ErrPathRequired = errors.New("config path is not set (--config flag or CONFIG_PATH)")
+
+// Load reads and validates the config file at path. Values from the
+// environment take priority over the file.
+func Load(path string) (*Config, error) {
+	if path == "" {
+		return nil, ErrPathRequired
 	}
 
 	var cfg Config
-	if err := cleanenv.ReadConfig(cfgPath, &cfg); err != nil {
-		panic(err)
+	if err := cleanenv.ReadConfig(path, &cfg); err != nil {
+		return nil, fmt.Errorf("read config %q: %w", path, err)
 	}
 
 	if err := cfg.Env.Validate(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return &cfg
+	return &cfg, nil
 }
 
 func (c Config) LogValue() slog.Value {
@@ -133,15 +149,23 @@ func (c Config) LogValue() slog.Value {
 	)
 }
 
-func fetchConfigPath() string {
-	var res string
+// ResolvePath returns the config path from the --config flag in args
+// (os.Args[1:]), falling back to the CONFIG_PATH environment variable.
+// It uses a private flag set, so it can be called any number of times.
+func ResolvePath(args []string) (string, error) {
+	var path string
 
-	flag.StringVar(&res, "config", "", "path to config file")
-	flag.Parse()
+	fs := flag.NewFlagSet("config", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	fs.StringVar(&path, "config", "", "path to config file")
 
-	if res == "" {
-		res = os.Getenv("CONFIG_PATH")
+	if err := fs.Parse(args); err != nil {
+		return "", fmt.Errorf("parse flags: %w", err)
 	}
 
-	return res
+	if path == "" {
+		path = os.Getenv("CONFIG_PATH")
+	}
+
+	return path, nil
 }

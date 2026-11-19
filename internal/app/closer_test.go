@@ -12,7 +12,7 @@ import (
 
 const testIterTimeout = 50 * time.Millisecond
 
-func newTestCloser() *closer {
+func newTestCloser() *Closer {
 	c := NewCloser(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	c.iterTimeout = testIterTimeout
 

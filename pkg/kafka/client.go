@@ -3,22 +3,23 @@ package kafka
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"kafka/internal/queue"
 )
 
 var (
-	_ queue.QueueProducer = (*client)(nil)
-	_ queue.QueueConsumer = (*client)(nil)
+	_ queue.ProducerClient = (*Client)(nil)
+	_ queue.ConsumerClient = (*Client)(nil)
 )
 
-type client struct {
+// Client is a Kafka client that implements both queue.ProducerClient and
+// queue.ConsumerClient.
+type Client struct {
 	cl *kgo.Client
 }
 
-func New(ctx context.Context, opts ...Option) (*client, error) {
+func New(ctx context.Context, opts ...Option) (*Client, error) {
 	cfg := newConfig(opts...)
 
 	cl, err := kgo.NewClient(cfg.kgoOpts...)
@@ -26,7 +27,7 @@ func New(ctx context.Context, opts ...Option) (*client, error) {
 		return nil, fmt.Errorf("new client error: %w", err)
 	}
 
-	connectCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	connectCtx, cancel := context.WithTimeout(ctx, cfg.pingTimeout)
 	defer cancel()
 
 	if err := cl.Ping(connectCtx); err != nil {
@@ -34,10 +35,10 @@ func New(ctx context.Context, opts ...Option) (*client, error) {
 		return nil, fmt.Errorf("connect to Kafka: %w", err)
 	}
 
-	return &client{cl: cl}, nil
+	return &Client{cl: cl}, nil
 }
 
-func (c *client) ProduceSync(ctx context.Context, msg queue.Message) error {
+func (c *Client) ProduceSync(ctx context.Context, msg queue.Message) error {
 	if err := c.cl.ProduceSync(ctx, newRecord(msg)).FirstErr(); err != nil {
 		return fmt.Errorf("produce: %w", err)
 	}
@@ -56,12 +57,12 @@ func newRecord(msg queue.Message) *kgo.Record {
 	}
 }
 
-// Consumer blocks until ctx is cancelled (returns nil) or a non-retriable
+// Consume blocks until ctx is cancelled (returns nil) or a non-retriable
 // error occurs. Fetch errors that franz-go retries internally never reach it.
-func (c *client) Consumer(ctx context.Context, handler queue.Handler, policy queue.FailurePolicy) error {
+func (c *Client) Consume(ctx context.Context, handler queue.Handler, policy queue.FailurePolicy) error {
 	return consume(ctx, c.cl, handler, policy)
 }
 
-func (c *client) Close() {
+func (c *Client) Close() {
 	c.cl.Close()
 }

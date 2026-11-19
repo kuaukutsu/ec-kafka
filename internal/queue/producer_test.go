@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
-type fakeQueueProducer struct {
+type fakeProducerClient struct {
 	ctxVal any
 	msg    Message
 	calls  int
 	err    error
 }
 
-func (f *fakeQueueProducer) ProduceSync(ctx context.Context, msg Message) error {
+func (f *fakeProducerClient) ProduceSync(ctx context.Context, msg Message) error {
 	f.calls++
 	f.ctxVal = ctx.Value(ctxKey{})
 	f.msg = msg
@@ -52,7 +52,7 @@ func TestProducer_Push(t *testing.T) {
 			t.Parallel()
 
 			// Given
-			fake := &fakeQueueProducer{err: tt.given.clientErr}
+			fake := &fakeProducerClient{err: tt.given.clientErr}
 			ctx := context.WithValue(context.Background(), ctxKey{}, "v")
 
 			// When

@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"kafka/internal/app"
 	"kafka/internal/config"
 )
 
 func main() {
-	cfg := config.New()
+	cfg, err := config.LoadFromArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "config:", err)
+		os.Exit(1)
+	}
+
 	log := app.NewLogger(cfg.Env).With(
 		slog.String("service", "consumer"),
 	)
@@ -30,17 +33,10 @@ func main() {
 }
 
 func run(log *slog.Logger, cfg *config.Config) error {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	ctx, stop := app.SignalContext(context.Background())
 	defer stop()
 
-	// Restore default signal behavior after the first signal so that a second
-	// SIGINT/SIGTERM terminates the process during a stuck shutdown.
-	go func() {
-		<-ctx.Done()
-		stop()
-	}()
-
-	application := app.NewApp(ctx, log, cfg, "consumer")
+	application := app.NewApp(log)
 	defer application.Close(ctx)
 
 	consumer, err := application.MakeConsumer(ctx, cfg)

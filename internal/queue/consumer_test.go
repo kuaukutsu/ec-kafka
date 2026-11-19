@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
-type fakeQueueConsumer struct {
+type fakeConsumerClient struct {
 	ctxVal  any
 	handler Handler
 	policy  FailurePolicy
 	err     error
 }
 
-func (f *fakeQueueConsumer) Consumer(ctx context.Context, handler Handler, policy FailurePolicy) error {
+func (f *fakeConsumerClient) Consume(ctx context.Context, handler Handler, policy FailurePolicy) error {
 	f.ctxVal = ctx.Value(ctxKey{})
 	f.handler = handler
 	f.policy = policy
@@ -57,7 +57,7 @@ func TestConsumer_Run(t *testing.T) {
 			t.Parallel()
 
 			// Given
-			fake := &fakeQueueConsumer{err: tt.given.clientErr}
+			fake := &fakeConsumerClient{err: tt.given.clientErr}
 			handled := false
 			handler := func(context.Context, Message) error {
 				handled = true

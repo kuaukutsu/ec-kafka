@@ -9,7 +9,7 @@ import (
 	"kafka/pkg/kafka"
 )
 
-func (a *app) MakeProducer(ctx context.Context, cfg *config.Config) (*queue.Producer, error) {
+func (a *App) MakeProducer(ctx context.Context, cfg *config.Config) (*queue.Producer, error) {
 	if err := cfg.Queue.Validate(); err != nil {
 		return nil, fmt.Errorf("producer config: %w", err)
 	}
@@ -33,7 +33,7 @@ func (a *app) MakeProducer(ctx context.Context, cfg *config.Config) (*queue.Prod
 	return queue.NewProducer(cl), nil
 }
 
-func (a *app) MakeConsumer(ctx context.Context, cfg *config.Config) (*queue.Consumer, error) {
+func (a *App) MakeConsumer(ctx context.Context, cfg *config.Config) (*queue.Consumer, error) {
 	if err := cfg.Queue.Validate(); err != nil {
 		return nil, fmt.Errorf("consumer config: %w", err)
 	}

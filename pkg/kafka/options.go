@@ -8,14 +8,18 @@ import (
 
 // config accumulates the settings collected from Option values.
 type config struct {
-	kgoOpts []kgo.Opt
+	kgoOpts     []kgo.Opt
+	pingTimeout time.Duration
 }
+
+// defaultPingTimeout bounds the connectivity check in New unless Timeout is given.
+const defaultPingTimeout = time.Second
 
 // Option modifies config. A single Option may append any number of kgo.Opt.
 type Option func(*config)
 
 func newConfig(opts ...Option) *config {
-	cfg := &config{}
+	cfg := &config{pingTimeout: defaultPingTimeout}
 	for _, opt := range opts {
 		opt(cfg)
 	}
@@ -34,8 +38,13 @@ func SeedBrokers(seeds ...string) Option {
 	return WithKgo(kgo.SeedBrokers(seeds...))
 }
 
+// Timeout sets both the dial timeout and the timeout of the connectivity
+// check performed by New.
 func Timeout(timeout time.Duration) Option {
-	return WithKgo(kgo.DialTimeout(timeout))
+	return func(c *config) {
+		c.pingTimeout = timeout
+		WithKgo(kgo.DialTimeout(timeout))(c)
+	}
 }
 
 func RecordDeliveryTimeout(timeout time.Duration) Option {
@@ -50,7 +59,7 @@ func ProducerDefault(clientID string) Option {
 	)
 }
 
-// Consumer joins the consumer group and subscribes to the given topics.
+// ConsumerDefault joins the consumer group and subscribes to the given topics.
 func ConsumerDefault(clientID, group string, topics ...string) Option {
 	return WithKgo(
 		kgo.ClientID(clientID),

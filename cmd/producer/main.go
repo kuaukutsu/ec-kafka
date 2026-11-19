@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"kafka/internal/app"
 	"kafka/internal/config"
@@ -14,7 +12,12 @@ import (
 )
 
 func main() {
-	cfg := config.New()
+	cfg, err := config.LoadFromArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "config:", err)
+		os.Exit(1)
+	}
+
 	log := app.NewLogger(cfg.Env).With(
 		slog.String("service", "producer"),
 	)
@@ -31,19 +34,12 @@ func main() {
 }
 
 func run(log *slog.Logger, cfg *config.Config) error {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	ctx, stop := app.SignalContext(context.Background())
 	defer stop()
 
-	// Restore default signal behavior after the first signal so that a second
-	// SIGINT/SIGTERM terminates the process during a stuck shutdown.
-	go func() {
-		<-ctx.Done()
-		stop()
-	}()
-
-	application := app.NewApp(ctx, log, cfg, "producer")
-	// Shutdown must not depend on the (possibly cancelled) run context.
-	defer application.Close(context.WithoutCancel(ctx))
+	application := app.NewApp(log)
+	// Closer ignores cancellation of ctx, so shutdown still runs after a signal.
+	defer application.Close(ctx)
 
 	p, err := application.MakeProducer(ctx, cfg)
 	if err != nil {

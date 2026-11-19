@@ -2,15 +2,15 @@ package queue
 
 import "context"
 
-type QueueProducer interface {
+type ProducerClient interface {
 	ProduceSync(ctx context.Context, msg Message) error
 }
 
 type Producer struct {
-	client QueueProducer
+	client ProducerClient
 }
 
-func NewProducer(client QueueProducer) *Producer {
+func NewProducer(client ProducerClient) *Producer {
 	return &Producer{
 		client: client,
 	}

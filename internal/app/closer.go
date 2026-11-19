@@ -16,7 +16,8 @@ type closeFn struct {
 	fn   func(context.Context) error
 }
 
-type closer struct {
+// Closer is a LIFO registry of shutdown functions.
+type Closer struct {
 	log         *slog.Logger
 	iterTimeout time.Duration // per-function budget; a field so tests can shorten it
 	mu          sync.Mutex
@@ -25,11 +26,11 @@ type closer struct {
 	result      error // stored for repeated Close calls
 }
 
-func NewCloser(log *slog.Logger) *closer {
-	return &closer{log: log, iterTimeout: closerIterationTimeout}
+func NewCloser(log *slog.Logger) *Closer {
+	return &Closer{log: log, iterTimeout: closerIterationTimeout}
 }
 
-func (c *closer) Add(name string, fn func(context.Context) error) {
+func (c *Closer) Add(name string, fn func(context.Context) error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -42,7 +43,7 @@ func (c *closer) Add(name string, fn func(context.Context) error) {
 // A function that outlives its timeout is abandoned, not awaited, so a hung
 // function cannot block the shutdown; its late result is only logged.
 // Errors (including timeouts) are collected and joined.
-func (c *closer) Close(ctx context.Context) error {
+func (c *Closer) Close(ctx context.Context) error {
 	c.once.Do(func() {
 		c.mu.Lock()
 		funcs := c.funcs

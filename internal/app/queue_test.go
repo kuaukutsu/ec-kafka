@@ -23,11 +23,12 @@ func TestApp_MakeConsumer_RequiresGroupAndTopic(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			// Given: validation happens before any broker connection is attempted.
-			cfg := &config.Config{Queue: config.Queue{Consumer: tt.given}}
+			// Given: a valid seed, so only the consumer settings can fail; validation
+			// happens before any broker connection is attempted.
+			cfg := &config.Config{Queue: config.Queue{Seed: "localhost:9092", Consumer: tt.given}}
 
 			// When
-			_, err := (&app{}).MakeConsumer(context.Background(), cfg)
+			_, err := (&App{}).MakeConsumer(context.Background(), cfg)
 
 			// Then
 			if !errors.Is(err, tt.want) {
@@ -44,7 +45,7 @@ func TestApp_MakeProducer_RequiresSeed(t *testing.T) {
 	cfg := &config.Config{}
 
 	// When
-	_, err := (&app{}).MakeProducer(context.Background(), cfg)
+	_, err := (&App{}).MakeProducer(context.Background(), cfg)
 
 	// Then
 	if !errors.Is(err, config.ErrSeedRequired) {
@@ -61,7 +62,7 @@ func TestApp_MakeConsumer_RequiresSeed(t *testing.T) {
 	}}
 
 	// When
-	_, err := (&app{}).MakeConsumer(context.Background(), cfg)
+	_, err := (&App{}).MakeConsumer(context.Background(), cfg)
 
 	// Then
 	if !errors.Is(err, config.ErrSeedRequired) {

@@ -13,17 +13,17 @@ type FailurePolicy interface {
 	OnFailure(ctx context.Context, msg Message, cause error) error
 }
 
-type QueueConsumer interface {
-	Consumer(ctx context.Context, handler Handler, policy FailurePolicy) error
+type ConsumerClient interface {
+	Consume(ctx context.Context, handler Handler, policy FailurePolicy) error
 }
 
 type Consumer struct {
-	client  QueueConsumer
+	client  ConsumerClient
 	handler Handler
 	policy  FailurePolicy
 }
 
-func NewConsumer(client QueueConsumer, handler Handler, policy FailurePolicy) *Consumer {
+func NewConsumer(client ConsumerClient, handler Handler, policy FailurePolicy) *Consumer {
 	return &Consumer{
 		client:  client,
 		handler: handler,
@@ -32,5 +32,5 @@ func NewConsumer(client QueueConsumer, handler Handler, policy FailurePolicy) *C
 }
 
 func (c *Consumer) Run(ctx context.Context) error {
-	return c.client.Consumer(ctx, c.handler, c.policy)
+	return c.client.Consume(ctx, c.handler, c.policy)
 }

@@ -213,3 +213,101 @@ func TestEnv_Validate(t *testing.T) {
 		})
 	}
 }
+
+func writeConfig(t *testing.T, body string) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	return path
+}
+
+func TestLoad(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid file", func(t *testing.T) {
+		t.Parallel()
+
+		cfg, err := Load(writeConfig(t, "env: local\nqueue:\n  seed: a:1\n"))
+
+		if err != nil {
+			t.Fatalf("Load() error = %v", err)
+		}
+
+		if cfg.Env != EnvLocal || cfg.Queue.Seed != "a:1" {
+			t.Fatalf("Load() = %+v", cfg)
+		}
+	})
+
+	t.Run("env defaults to production", func(t *testing.T) {
+		t.Parallel()
+
+		cfg, err := Load(writeConfig(t, "queue:\n  seed: a:1\n"))
+
+		if err != nil || cfg.Env != EnvProd {
+			t.Fatalf("Load() = %+v, %v, want env production", cfg, err)
+		}
+	})
+
+	t.Run("empty path", func(t *testing.T) {
+		t.Parallel()
+
+		if _, err := Load(""); !errors.Is(err, ErrPathRequired) {
+			t.Fatalf("Load() error = %v, want %v", err, ErrPathRequired)
+		}
+	})
+
+	t.Run("missing file", func(t *testing.T) {
+		t.Parallel()
+
+		if _, err := Load(filepath.Join(t.TempDir(), "nope.yaml")); err == nil {
+			t.Fatal("Load() error = nil, want an error")
+		}
+	})
+
+	t.Run("invalid env", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := Load(writeConfig(t, "env: prodution\n"))
+
+		if !errors.Is(err, ErrInvalidEnv) {
+			t.Fatalf("Load() error = %v, want %v", err, ErrInvalidEnv)
+		}
+	})
+}
+
+// Not parallel: the test mutates process environment variables.
+func TestResolvePath(t *testing.T) {
+	tests := map[string]struct {
+		givenArgs []string
+		givenEnv  string
+		want      string
+		wantErr   bool
+	}{
+		"flag":              {givenArgs: []string{"--config=a.yaml"}, want: "a.yaml"},
+		"flag separate arg": {givenArgs: []string{"-config", "a.yaml"}, want: "a.yaml"},
+		"env fallback":      {givenEnv: "env.yaml", want: "env.yaml"},
+		"flag beats env":    {givenArgs: []string{"--config=a.yaml"}, givenEnv: "env.yaml", want: "a.yaml"},
+		"nothing set":       {want: ""},
+		"unknown flag":      {givenArgs: []string{"--bogus"}, wantErr: true},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			setEnv(t, "CONFIG_PATH", tt.givenEnv)
+
+			got, err := ResolvePath(tt.givenArgs)
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ResolvePath() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if got != tt.want {
+				t.Fatalf("ResolvePath() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

@@ -22,7 +22,18 @@
 | M2 | Сборка записи вынесена в `newRecord`, пустой `Message.Key` даёт `nil`; `ProduceSync` использует `Get*`-методы. | `pkg/kafka/client_test.go`, `internal/queue/message_test.go` |
 | M3 | `Queue.Validate()` (ошибка `ErrSeedRequired`) вызывается из `MakeProducer` и `MakeConsumer`; `Env.Validate()` (ошибка `ErrInvalidEnv`) вызывается из `config.New`. | `internal/config/config_test.go`, `internal/app/queue_test.go` |
 
-Minor-пункты и заметки не тронуты. Текст находок ниже описывает код **до** исправления.
+Minor-пункты m1–m7 тоже исправлены (см. таблицу ниже); заметки N1–N4 не тронуты.
+Текст находок в разделах 3–5 описывает код **до** исправлений.
+
+| Пункт | Что сделано |
+|---|---|
+| m1 | `NewApp(log)`: убраны неиспользуемые `ctx`, `name`, `cfg`. |
+| m2 | Типы экспортированы: `App`, `Closer`, `kafka.Client`. |
+| m3 | `QueueProducer`/`QueueConsumer` → `ProducerClient`/`ConsumerClient`; метод `Consumer` → `Consume`. |
+| m4 | Таймаут пинга берётся из опции `Timeout` (по умолчанию 1s). |
+| m5 | `Get*`-методы `Message` теперь используются в `newRecord` (закрыто вместе с M2). |
+| m6 | `config.New` заменён на `Load(path)`, `ResolvePath(args)` и `LoadFromArgs`: без паник и без глобального флага. |
+| m7 | Общий `app.SignalContext`; в обоих `main` одинаковый `application.Close(ctx)`. |
 
 ---
 

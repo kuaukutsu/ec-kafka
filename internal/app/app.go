@@ -3,27 +3,24 @@ package app
 import (
 	"context"
 	"log/slog"
-
-	"kafka/internal/config"
 )
 
-type app struct {
+// App wires application dependencies and owns their shutdown.
+type App struct {
 	log    *slog.Logger
-	cfg    *config.Config
-	closer *closer
+	closer *Closer
 }
 
-func NewApp(ctx context.Context, log *slog.Logger, cfg *config.Config, name string) *app {
-	c := NewCloser(log)
-
-	return &app{
+func NewApp(log *slog.Logger) *App {
+	return &App{
 		log:    log,
-		cfg:    cfg,
-		closer: c,
+		closer: NewCloser(log),
 	}
 }
 
-func (a *app) Close(ctx context.Context) {
+// Close runs all registered shutdown functions. It does not depend on ctx
+// being alive: see Closer.Close.
+func (a *App) Close(ctx context.Context) {
 	if err := a.closer.Close(ctx); err != nil {
 		a.log.Error("app: shutdown error", slog.String("error", err.Error()))
 	}
