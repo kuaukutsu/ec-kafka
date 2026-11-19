@@ -1,0 +1,12 @@
+.zed
+.idea
+.claude
+.git
+.gitlab
+docs
+tests
+runtime
+bin
+README.md
+CHANGELOG.md
+LICENSE

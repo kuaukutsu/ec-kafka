@@ -1,0 +1,9 @@
+.idea
+.zed
+.bin
+.claude
+
+.tool-versions
+
+# debug
+cmd/example
