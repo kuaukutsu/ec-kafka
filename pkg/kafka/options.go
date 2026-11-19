@@ -45,6 +45,7 @@ func RecordDeliveryTimeout(timeout time.Duration) Option {
 func ProducerDefault(clientID string) Option {
 	return WithKgo(
 		kgo.ClientID(clientID),
+		kgo.DisableIdempotentWrite(),
 		kgo.RequiredAcks(kgo.LeaderAck()),
 	)
 }
