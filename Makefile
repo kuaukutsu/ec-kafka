@@ -20,6 +20,10 @@ help: ## Display this help screen
 
 -include .claude/Makefile
 
+## Claude
+
+-include .codex/Makefile
+
 ## App
 	
 goset:
