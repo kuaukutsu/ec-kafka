@@ -10,6 +10,10 @@ import (
 )
 
 func (a *app) MakeProducer(ctx context.Context, cfg *config.Config) (*queue.Producer, error) {
+	if err := cfg.Queue.Validate(); err != nil {
+		return nil, fmt.Errorf("producer config: %w", err)
+	}
+
 	cl, err := kafka.New(
 		ctx,
 		kafka.SeedBrokers(cfg.Queue.Brokers()...),
@@ -30,6 +34,10 @@ func (a *app) MakeProducer(ctx context.Context, cfg *config.Config) (*queue.Prod
 }
 
 func (a *app) MakeConsumer(ctx context.Context, cfg *config.Config) (*queue.Consumer, error) {
+	if err := cfg.Queue.Validate(); err != nil {
+		return nil, fmt.Errorf("consumer config: %w", err)
+	}
+
 	if err := cfg.Queue.Consumer.Validate(); err != nil {
 		return nil, fmt.Errorf("consumer config: %w", err)
 	}

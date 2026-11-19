@@ -158,3 +158,58 @@ func TestQueue_Brokers(t *testing.T) {
 		})
 	}
 }
+
+func TestQueue_Validate(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		given string
+		want  error
+	}{
+		"valid":           {given: "localhost:19092", want: nil},
+		"valid list":      {given: "a:1, b:2", want: nil},
+		"empty":           {given: "", want: ErrSeedRequired},
+		"only separators": {given: " , ,", want: ErrSeedRequired},
+		"only whitespace": {given: "   ", want: ErrSeedRequired},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			err := Queue{Seed: tt.given}.Validate()
+
+			if !errors.Is(err, tt.want) {
+				t.Fatalf("Validate() error = %v, want %v", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestEnv_Validate(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		given Env
+		want  error
+	}{
+		"local":      {given: EnvLocal, want: nil},
+		"stage":      {given: EnvStage, want: nil},
+		"production": {given: EnvProd, want: nil},
+		"typo":       {given: "prodution", want: ErrInvalidEnv},
+		"empty":      {given: "", want: ErrInvalidEnv},
+		"wrong case": {given: "Local", want: ErrInvalidEnv},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			err := tt.given.Validate()
+
+			if !errors.Is(err, tt.want) {
+				t.Fatalf("Validate() error = %v, want %v", err, tt.want)
+			}
+		})
+	}
+}

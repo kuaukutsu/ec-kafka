@@ -17,15 +17,16 @@ type closeFn struct {
 }
 
 type closer struct {
-	log    *slog.Logger
-	mu     sync.Mutex
-	once   sync.Once
-	funcs  []closeFn
-	result error // stored for repeated Close calls
+	log         *slog.Logger
+	iterTimeout time.Duration // per-function budget; a field so tests can shorten it
+	mu          sync.Mutex
+	once        sync.Once
+	funcs       []closeFn
+	result      error // stored for repeated Close calls
 }
 
 func NewCloser(log *slog.Logger) *closer {
-	return &closer{log: log}
+	return &closer{log: log, iterTimeout: closerIterationTimeout}
 }
 
 func (c *closer) Add(name string, fn func(context.Context) error) {
@@ -38,6 +39,8 @@ func (c *closer) Add(name string, fn func(context.Context) error) {
 // Close runs all registered functions in LIFO order.
 // Each function gets its own closerIterationTimeout budget via a goroutine,
 // so non-context-aware functions are also bounded by timeout.
+// A function that outlives its timeout is abandoned, not awaited, so a hung
+// function cannot block the shutdown; its late result is only logged.
 // Errors (including timeouts) are collected and joined.
 func (c *closer) Close(ctx context.Context) error {
 	c.once.Do(func() {
@@ -51,7 +54,6 @@ func (c *closer) Close(ctx context.Context) error {
 		}
 
 		var errs []error
-		var lateWg sync.WaitGroup
 
 		for i := len(funcs) - 1; i >= 0; i-- {
 			f := funcs[i]
@@ -61,7 +63,7 @@ func (c *closer) Close(ctx context.Context) error {
 			// (e.g. OS-signal context). The iteration timeout is the only bound.
 			iterCtx, cancel := context.WithTimeout(
 				context.WithoutCancel(ctx),
-				closerIterationTimeout,
+				c.iterTimeout,
 			)
 
 			done := make(chan error, 1)
@@ -80,11 +82,12 @@ func (c *closer) Close(ctx context.Context) error {
 				errs = append(errs, fmt.Errorf(
 					"closer: %s: timed out after %s",
 					f.name,
-					closerIterationTimeout,
+					c.iterTimeout,
 				))
-				lateWg.Add(1)
+				// Do not wait for the function: it ignored its context, and
+				// waiting would defeat the timeout. Report its late result
+				// from a background goroutine instead.
 				go func(name string, ch <-chan error) {
-					defer lateWg.Done()
 					if err := <-ch; err != nil {
 						c.log.Warn("closer: late completion", slog.String("name", name), slog.String("error", err.Error()))
 					} else {
@@ -94,7 +97,6 @@ func (c *closer) Close(ctx context.Context) error {
 			}
 		}
 
-		lateWg.Wait()
 		c.result = errors.Join(errs...)
 	})
 

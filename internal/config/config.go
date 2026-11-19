@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -18,6 +19,20 @@ const (
 	EnvStage Env = "stage"
 	EnvProd  Env = "production"
 )
+
+// ErrInvalidEnv is returned when Config.Env is not one of the known environments.
+var ErrInvalidEnv = errors.New("env must be one of: local, stage, production")
+
+// Validate checks that the environment is one of the known values, so a typo
+// does not silently select the default logging behavior.
+func (e Env) Validate() error {
+	switch e {
+	case EnvLocal, EnvStage, EnvProd:
+		return nil
+	default:
+		return fmt.Errorf("%w (got %q)", ErrInvalidEnv, string(e))
+	}
+}
 
 type Config struct {
 	Env   Env   `yaml:"env" env-default:"production"`
@@ -43,6 +58,20 @@ func (q Queue) Brokers() []string {
 	}
 
 	return brokers
+}
+
+// ErrSeedRequired is returned when no seed broker is configured. Without it
+// franz-go silently falls back to 127.0.0.1:9092.
+var ErrSeedRequired = errors.New("queue.seed is required (config file or KAFKA_SEED)")
+
+// Validate checks the settings every Kafka client (producer or consumer)
+// cannot start without.
+func (q Queue) Validate() error {
+	if len(q.Brokers()) == 0 {
+		return ErrSeedRequired
+	}
+
+	return nil
 }
 
 var (
@@ -78,6 +107,10 @@ func New() *Config {
 
 	var cfg Config
 	if err := cleanenv.ReadConfig(cfgPath, &cfg); err != nil {
+		panic(err)
+	}
+
+	if err := cfg.Env.Validate(); err != nil {
 		panic(err)
 	}
 

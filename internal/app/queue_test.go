@@ -36,3 +36,35 @@ func TestApp_MakeConsumer_RequiresGroupAndTopic(t *testing.T) {
 		})
 	}
 }
+
+func TestApp_MakeProducer_RequiresSeed(t *testing.T) {
+	t.Parallel()
+
+	// Given: no seed brokers; validation happens before any connection attempt.
+	cfg := &config.Config{}
+
+	// When
+	_, err := (&app{}).MakeProducer(context.Background(), cfg)
+
+	// Then
+	if !errors.Is(err, config.ErrSeedRequired) {
+		t.Fatalf("MakeProducer() error = %v, want %v", err, config.ErrSeedRequired)
+	}
+}
+
+func TestApp_MakeConsumer_RequiresSeed(t *testing.T) {
+	t.Parallel()
+
+	// Given: valid consumer settings, but no seed brokers.
+	cfg := &config.Config{Queue: config.Queue{
+		Consumer: config.Consumer{Group: "g", Topic: "t"},
+	}}
+
+	// When
+	_, err := (&app{}).MakeConsumer(context.Background(), cfg)
+
+	// Then
+	if !errors.Is(err, config.ErrSeedRequired) {
+		t.Fatalf("MakeConsumer() error = %v, want %v", err, config.ErrSeedRequired)
+	}
+}

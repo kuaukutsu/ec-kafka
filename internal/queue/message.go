@@ -15,7 +15,14 @@ func (m Message) GetTopic() string {
 	return m.Topic
 }
 
+// GetKey returns nil for an empty key. A non-nil empty slice would be treated by
+// the Kafka client as a real key, hashed, and every keyless message would land
+// in the same partition.
 func (m Message) GetKey() []byte {
+	if m.Key == "" {
+		return nil
+	}
+
 	return []byte(m.Key)
 }
 

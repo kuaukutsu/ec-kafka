@@ -38,17 +38,22 @@ func New(ctx context.Context, opts ...Option) (*client, error) {
 }
 
 func (c *client) ProduceSync(ctx context.Context, msg queue.Message) error {
-	record := &kgo.Record{
-		Topic: msg.Topic,
-		Key:   []byte(msg.Key),
-		Value: []byte(msg.Value),
-	}
-
-	if err := c.cl.ProduceSync(ctx, record).FirstErr(); err != nil {
+	if err := c.cl.ProduceSync(ctx, newRecord(msg)).FirstErr(); err != nil {
 		return fmt.Errorf("produce: %w", err)
 	}
 
 	return nil
+}
+
+// newRecord converts a message to a kgo record. The key stays nil when the
+// message has no key, so the client spreads such records over partitions
+// instead of hashing an empty key into a single one.
+func newRecord(msg queue.Message) *kgo.Record {
+	return &kgo.Record{
+		Topic: msg.GetTopic(),
+		Key:   msg.GetKey(),
+		Value: msg.GetValue(),
+	}
 }
 
 // Consumer blocks until ctx is cancelled (returns nil) or a non-retriable
