@@ -40,14 +40,14 @@ fmt-check: _gofumpt_install
 run:
 	go run -tags local cmd/$(ARGS)/main.go --config=./config/local.yaml
 
+cevent:
+	KAFKA_CONSUMER_GROUP=env KAFKA_CONSUMER_TOPIC=playground.events \
+	    go run -tags local cmd/consumer/main.go --config=./config/local.yaml
+	
 race:
 	go run -race ./$(ARGS) -run='^$$'
 
-test:
-	- go test ./$(ARGS)
-	- go test -race ./$(ARGS) -count=2 -cpu=1,2 -timeout=2m
-
-unit-test: ### run unit-test
+tests: ### run unit-test
 	- go clean -testcache
 	- go test ./internal/...
 	
