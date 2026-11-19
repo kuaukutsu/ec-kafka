@@ -44,9 +44,8 @@ func (c *client) ProduceSync(ctx context.Context, msg queue.Message) error {
 		Value: []byte(msg.Value),
 	}
 
-	// Alternatively, ProduceSync exists to synchronously produce a batch of records.
 	if err := c.cl.ProduceSync(ctx, record).FirstErr(); err != nil {
-		return fmt.Errorf("record had a produce error while synchronously producing: %w", err)
+		return fmt.Errorf("produce: %w", err)
 	}
 
 	return nil

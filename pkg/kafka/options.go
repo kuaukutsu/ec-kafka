@@ -50,7 +50,7 @@ func ProducerDefault(clientID string) Option {
 }
 
 // Consumer joins the consumer group and subscribes to the given topics.
-func ConsumerDefault(clientID string, group string, topics ...string) Option {
+func ConsumerDefault(clientID, group string, topics ...string) Option {
 	return WithKgo(
 		kgo.ClientID(clientID),
 		kgo.ConsumerGroup(group),

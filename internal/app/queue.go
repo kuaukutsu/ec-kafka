@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"kafka/internal/config"
 	"kafka/internal/queue"
@@ -13,7 +12,7 @@ import (
 func (a *app) MakeProducer(ctx context.Context, cfg *config.Config) (*queue.Producer, error) {
 	cl, err := kafka.New(
 		ctx,
-		kafka.SeedBrokers(strings.Split(cfg.Queue.Seed, ",")...),
+		kafka.SeedBrokers(cfg.Queue.Brokers()...),
 		kafka.ProducerDefault("producer"),
 		kafka.Timeout(cfg.Queue.Timeout),
 		kafka.RecordDeliveryTimeout(cfg.Queue.DeliveryTimeout),
@@ -31,10 +30,14 @@ func (a *app) MakeProducer(ctx context.Context, cfg *config.Config) (*queue.Prod
 }
 
 func (a *app) MakeConsumer(ctx context.Context, cfg *config.Config) (*queue.Consumer, error) {
+	if err := cfg.Queue.Consumer.Validate(); err != nil {
+		return nil, fmt.Errorf("consumer config: %w", err)
+	}
+
 	cl, err := kafka.New(
 		ctx,
-		kafka.SeedBrokers(strings.Split(cfg.Queue.Seed, ",")...),
-		kafka.ConsumerDefault("consumer", "gokafka", "playground.events"),
+		kafka.SeedBrokers(cfg.Queue.Brokers()...),
+		kafka.ConsumerDefault("consumer", cfg.Queue.Consumer.Group, cfg.Queue.Consumer.Topic),
 		kafka.Timeout(cfg.Queue.Timeout),
 	)
 	if err != nil {
