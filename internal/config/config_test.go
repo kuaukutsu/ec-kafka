@@ -232,7 +232,6 @@ func TestLoad(t *testing.T) {
 		t.Parallel()
 
 		cfg, err := Load(writeConfig(t, "env: local\nqueue:\n  seed: a:1\n"))
-
 		if err != nil {
 			t.Fatalf("Load() error = %v", err)
 		}

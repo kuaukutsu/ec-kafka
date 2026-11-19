@@ -37,7 +37,6 @@ func TestCloser_RunsInLIFOOrder(t *testing.T) {
 
 	// When
 	err := c.Close(context.Background())
-
 	// Then
 	if err != nil {
 		t.Fatalf("Close() error = %v, want nil", err)

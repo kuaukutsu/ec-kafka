@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 
 	"kafka/internal/app"
 	"kafka/internal/config"
@@ -49,16 +50,19 @@ func run(log *slog.Logger, cfg *config.Config) error {
 	pushCtx, cancel := context.WithTimeout(ctx, cfg.Queue.DeliveryTimeout)
 	defer cancel()
 
-	msg := queue.Message{
-		Topic: "playground.events",
-		Value: "test",
-	}
+	for i := range 10 {
+		msg := queue.Message{
+			Topic: "playground.events",
+			Key:   "key" + strconv.Itoa(i%2),
+			Value: fmt.Sprintf("event-%d", i),
+		}
 
-	if err := p.Push(pushCtx, msg); err != nil {
-		return fmt.Errorf("producer push: %w", err)
-	}
+		if err := p.Push(pushCtx, msg); err != nil {
+			return fmt.Errorf("producer push: %w", err)
+		}
 
-	log.Info("producer: message sent", slog.String("topic", msg.Topic))
+		log.Info("producer: message sent", slog.String("topic", msg.Topic))
+	}
 
 	return nil
 }
