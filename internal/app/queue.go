@@ -25,10 +25,13 @@ func (a *App) MakeProducer(ctx context.Context, cfg *config.Config) (*queue.Prod
 		return nil, err
 	}
 
-	a.closer.Add("producer", func(ctx context.Context) error {
+	if err := a.closer.Add("producer", func(_ context.Context) error {
 		cl.Close()
 		return nil
-	})
+	}); err != nil {
+		cl.Close()
+		return nil, fmt.Errorf("register client shutdown: %w", err)
+	}
 
 	return queue.NewProducer(cl), nil
 }
@@ -52,10 +55,13 @@ func (a *App) MakeConsumer(ctx context.Context, cfg *config.Config) (*queue.Cons
 		return nil, err
 	}
 
-	a.closer.Add("consumer", func(ctx context.Context) error {
+	if err := a.closer.Add("consumer", func(_ context.Context) error {
 		cl.Close()
 		return nil
-	})
+	}); err != nil {
+		cl.Close()
+		return nil, fmt.Errorf("register client shutdown: %w", err)
+	}
 
 	handler := func(_ context.Context, msg queue.Message) error {
 		fmt.Println(msg.Value)

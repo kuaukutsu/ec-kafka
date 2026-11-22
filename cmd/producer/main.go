@@ -39,7 +39,6 @@ func run(log *slog.Logger, cfg *config.Config) error {
 	defer stop()
 
 	application := app.NewApp(log)
-	// Closer ignores cancellation of ctx, so shutdown still runs after a signal.
 	defer application.Close(ctx)
 
 	p, err := application.MakeProducer(ctx, cfg)
