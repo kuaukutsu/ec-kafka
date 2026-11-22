@@ -1,0 +1,2 @@
+project_doc_fallback_filenames = [".codex/AGENTS.md", ".codex/AGENTS.override.md"]
+sandbox_mode = "danger-full-access"

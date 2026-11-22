@@ -16,12 +16,10 @@ help: ## Display this help screen
 %:
 	@:
 	
-## Claude
+## AI
 
+-include agent.mk
 -include .claude/Makefile
-
-## Claude
-
 -include .codex/Makefile
 
 ## App
