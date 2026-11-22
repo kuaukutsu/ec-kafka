@@ -101,6 +101,7 @@ formatters: # Форматтеры кода (проверка стиля)
     - gci      # Форматтер импортов (гибкая альтернатива goimports)
   settings:
     gofumpt:
+      module-path: kafka
       extra:
         group-params: true  # Взамен устаревшего extra-rules: true
     gci:

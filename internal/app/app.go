@@ -14,14 +14,14 @@ type App struct {
 func NewApp(log *slog.Logger) *App {
 	return &App{
 		log:    log,
-		closer: NewCloser(log),
+		closer: NewCloser(),
 	}
 }
 
-// Close runs all registered shutdown functions. It does not depend on ctx
-// being alive: see Closer.Close.
+// Close runs shutdown functions even if the caller's context is cancelled.
+// Context values are preserved, but cancellation and deadlines are not.
 func (a *App) Close(ctx context.Context) {
-	if err := a.closer.Close(ctx); err != nil {
+	if err := a.closer.Close(context.WithoutCancel(ctx)); err != nil {
 		a.log.Error("app: shutdown error", slog.String("error", err.Error()))
 	}
 }

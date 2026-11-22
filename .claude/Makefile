@@ -1,6 +1,6 @@
 CLAUDE_IMAGE ?= claude-cli:$(AGENT_PROJECT_ID)
 
-codex: _codex_volume_create agent-vpn-check ## codex
+claude: _codex_volume_create agent-vpn-check ## codex
 	docker build \
 	  --build-arg UID=$(USER) \
 	  --build-arg GO_VERSION=1.27 \
